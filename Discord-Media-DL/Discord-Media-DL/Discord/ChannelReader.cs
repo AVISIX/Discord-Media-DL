@@ -33,7 +33,7 @@ namespace Discord_Media_DL.Discord
             IndexVideos
         }
 
-        public async Task<string[]> IndexMedia(int max = 1000, IndexMode mode = IndexMode.IndexAll)
+        public async Task<string[]> IndexAttachments(int max = 1000, IndexMode mode = IndexMode.IndexAll)
         {
             List<string> result = new List<string>();
 

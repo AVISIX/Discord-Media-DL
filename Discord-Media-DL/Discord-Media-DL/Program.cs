@@ -67,6 +67,11 @@ ________                      .__                    .___
 
         public static Task<Task> Run()
         {
+            /*
+            To Do:
+            - Make different folders for image and video
+            */
+
             PrintWaterMark();
 
             string token = null;
@@ -314,7 +319,6 @@ If so, this will close all instances of Discord and your Browsers.",
                 }
 #endif
 #endregion
-
                 Console.WriteLine();
 
                 Console.WriteLine("Indexing Media...");
@@ -331,7 +335,7 @@ If so, this will close all instances of Discord and your Browsers.",
                     Console.WriteLine("Error: " + e.Message);
                 });
 
-                media = reader.IndexMedia(maxDownloads, mode).GetAwaiter().GetResult();
+                media = reader.IndexAttachments(maxDownloads, mode).GetAwaiter().GetResult();
 
                 Console.WriteLine($"Finished Indexing, total Media indexed: {media.Length}");
             }
@@ -362,7 +366,13 @@ If so, this will close all instances of Discord and your Browsers.",
 
                 dl.Download(media, outputPath).Result.GetAwaiter().GetResult();
             }
-#endregion
+            #endregion
+
+            Console.WriteLine();
+
+            Console.WriteLine("Done, you can close this Window now :)");
+
+            Console.Read();
 
             return Task.FromResult(Task.CompletedTask);
         }

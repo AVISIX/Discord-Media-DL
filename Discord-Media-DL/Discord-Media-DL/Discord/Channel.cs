@@ -13,18 +13,6 @@ namespace Discord_Media_DL.Discord
    
     public static class Channel
     {
-        public enum AttachmentType
-        {
-            Image = 0,
-            Video = 1
-        }
-
-        public struct Attachment
-        {
-            public AttachmentType Type { get; set; }
-            public string Url { get; set; }
-        }
-
         public static async Task<bool> IsValid(string channelID, string token)
         {
             if (string.IsNullOrEmpty(channelID))
