@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Discord_Media_DL.Core
 {
-    public delegate void MediaDownloaderMediaDownloaded(string name);
+    public delegate void MediaDownloaderMediaDownloaded(string name, double progress);
     public delegate void MediaDownloaderProgressUpdateHandler(double progress);
     public delegate void MediaDownloaderErrorHandler(Exception e, string url);
 
@@ -33,6 +33,12 @@ namespace Discord_Media_DL.Core
             if (destination.EndsWith("\\") == false)
                 destination += "\\";
 
+            if (Directory.Exists(destination) == false)
+                Directory.CreateDirectory(destination);
+
+            // It is extremely unlikely that there are 2 medias with the exact same size. if thats the case it has to be a duplicate.
+            List<int> allSizes = new List<int>(); 
+
             Task t = new Task(() =>
             {
                 List<string> queue = urls.ToList();
@@ -47,22 +53,31 @@ namespace Discord_Media_DL.Core
 
                     pointer--;
 
+                    double progress = (100.0 / (urls.Length)) * (urls.Length - 1.0 - pointer);
+
                     try
                     {
-                        string extension = Path.GetExtension(new Uri(fileUrl).LocalPath);
-                        string path = destination + Guid.NewGuid().ToString() + extension;
-
                         WebClient client = new WebClient();
                         byte[] data = client.DownloadData(fileUrl);
 
-                        if (File.Exists(path) == false)
-                            File.Create(path).Close();
+                        if (allSizes.Contains(data.Length) == false)
+                        {
+                            allSizes.Add(data.Length);
 
-                        File.WriteAllBytes(path, data);
-                        
-                        OnDownloaded?.Invoke(fileUrl);
+                            string extension = Path.GetExtension(new Uri(fileUrl).LocalPath);
+                            string path = destination + Guid.NewGuid().ToString() + extension;
 
-                        client.Dispose();
+                            if (File.Exists(path) == false)
+                                File.Create(path).Close();
+
+                            File.WriteAllBytes(path, data);
+
+                            OnDownloaded?.Invoke(fileUrl, progress);
+
+                            client.Dispose();
+                        }
+                        else
+                            OnDownloadError?.Invoke(new Exception("Duplicate Media found and avoided."), fileUrl);
                     }
                     catch (Exception e)
                     {
@@ -73,7 +88,7 @@ namespace Discord_Media_DL.Core
                         OnDownloadError?.Invoke(e, fileUrl);
                     }
 
-                    OnProgressUpdated?.Invoke((100.0 / (urls.Length)) * (urls.Length - 1.0 - pointer));
+                    OnProgressUpdated?.Invoke(progress);
                 }
             });
 

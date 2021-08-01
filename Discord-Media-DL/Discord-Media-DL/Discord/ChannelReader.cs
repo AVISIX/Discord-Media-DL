@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -11,6 +12,23 @@ namespace Discord_Media_DL.Discord
 {
     public delegate void ChannelReaderProgressUpdateHandler(double percent);
     public delegate void ChannelReaderErrorHandler(Exception error);
+
+    public enum AttachmentType
+    {
+        Image = 0,
+        Video = 1
+    }
+
+    public struct Attachment
+    {
+        public AttachmentType Type { get; set; }
+        public string Url { get; set; }
+        public Attachment(AttachmentType type, string url)
+        {
+            Url = url;
+            Type = type;
+        }
+    }
 
     public class ChannelReader
     {
@@ -33,9 +51,10 @@ namespace Discord_Media_DL.Discord
             IndexVideos
         }
 
-        public async Task<string[]> IndexAttachments(int max = 1000, IndexMode mode = IndexMode.IndexAll)
+        public async Task<Attachment[]> IndexAttachments(int max = 1000, IndexMode mode = IndexMode.IndexAll)
         {
-            List<string> result = new List<string>();
+            List<Attachment> result = new List<Attachment>();
+            List<string> alreadyIndexed = new List<string>();
 
             try
             {
@@ -66,8 +85,12 @@ namespace Discord_Media_DL.Discord
                                         if (mode == IndexMode.IndexAll || mode == IndexMode.IndexImages)
                                             if (media.TryGetValue("url", out JToken jurl))
                                             {
-                                                if (result.Contains(jurl.ToString()) == false)
-                                                    result.Add(jurl.ToString());
+                                                string url = jurl.ToString();
+                                                if (alreadyIndexed.Contains(url) == false)
+                                                {
+                                                    alreadyIndexed.Add(url);
+                                                    result.Add(new Attachment(AttachmentType.Image, url));
+                                                }
                                             }
                                     }
                                     else
@@ -76,8 +99,12 @@ namespace Discord_Media_DL.Discord
                                         if (mode == IndexMode.IndexAll || mode == IndexMode.IndexVideos)
                                             if (media.TryGetValue("url", out JToken jurl))
                                             {
-                                                if (result.Contains(jurl.ToString()) == false)
-                                                    result.Add(jurl.ToString());
+                                                string url = jurl.ToString();
+                                                if (alreadyIndexed.Contains(url) == false)
+                                                {
+                                                    alreadyIndexed.Add(url);
+                                                    result.Add(new Attachment(AttachmentType.Video, url));
+                                                }
                                             }
                                     }
                                 }
@@ -126,7 +153,6 @@ namespace Discord_Media_DL.Discord
                 }
                 else
                     OnProgressUpdated?.Invoke((100.0 / messages.Count) * counter);
-
 
                 client.Dispose();
             }

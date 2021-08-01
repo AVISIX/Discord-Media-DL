@@ -2,9 +2,9 @@
 using Discord_Media_DL.Discord;
 using Discord_Media_DL.Misc;
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Net.Http.Headers;
-using System.Threading;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Discord_Media_DL
@@ -253,7 +253,7 @@ If so, this will close all instances of Discord and your Browsers.",
 
             Console.WriteLine();
 
-            string[] media = new string[] { };
+            Attachment[] media = new Attachment[] { };
 
 #region Index Media Url's
             {
@@ -332,7 +332,12 @@ If so, this will close all instances of Discord and your Browsers.",
 
                 reader.OnError += new ChannelReaderErrorHandler((Exception e) =>
                 {
+                    if (e is WebException == false)
+                        return;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Error: " + e.Message);
+                    Console.ForegroundColor = ConsoleColor.White;
                 });
 
                 media = reader.IndexAttachments(maxDownloads, mode).GetAwaiter().GetResult();
@@ -343,30 +348,61 @@ If so, this will close all instances of Discord and your Browsers.",
 
             Console.WriteLine();
 
-            #region Download Media
+            if (media.Length > 0)
             {
-                Console.WriteLine("Downloading Media...");
-
-                MediaDownloader dl = new MediaDownloader();
-
-                dl.OnDownloadError += new MediaDownloaderErrorHandler((Exception e, string url) =>
+                #region Download Media
                 {
-                    Console.WriteLine($"Failed to Download: {url}");
-                });
+                    MediaDownloader dl = new MediaDownloader();
 
-                dl.OnProgressUpdated += new MediaDownloaderProgressUpdateHandler((double progress) =>
-                {
-                    Console.WriteLine($"Progress: {decimal.Round((decimal)progress, 1)}%");
-                });
+                    dl.OnDownloadError += new MediaDownloaderErrorHandler((Exception e, string url) =>
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Failed to Download '{url.GetFilenameFromUrl()}'. Reason: " + e.Message);
+                        Console.ForegroundColor = ConsoleColor.White;
+                    });
 
-                dl.OnDownloaded += new MediaDownloaderMediaDownloaded((string url) =>
-                {
-                //    Console.WriteLine($"Downloaded: {url}");
-                });
+                    dl.OnDownloaded += new MediaDownloaderMediaDownloaded((string url, double progress) =>
+                    {
+                        Console.WriteLine($"Progress: {decimal.Round((decimal)progress, 1)}% | Downloaded '{url.GetFilenameFromUrl()}'");
+                    });
 
-                dl.Download(media, outputPath).Result.GetAwaiter().GetResult();
+                    List<string> ImageUrls = new List<string>();
+                    List<string> VideoUrls = new List<string>();
+
+                    foreach (Attachment m in media)
+                    {
+                        switch (m.Type)
+                        {
+                            case AttachmentType.Image:
+                                ImageUrls.Add(m.Url);
+                                break;
+
+                            case AttachmentType.Video:
+                                VideoUrls.Add(m.Url);
+                                break;
+                        }
+                    }
+
+                    if (ImageUrls.Count > 0)
+                    {
+                        Console.WriteLine("Downloading Images...");
+                        dl.Download(ImageUrls.ToArray(), outputPath + @"\images\").Result.GetAwaiter().GetResult();
+                    }
+
+                    if (VideoUrls.Count > 0)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("Downloading Vidoes...");
+
+                        dl.Download(VideoUrls.ToArray(), outputPath + @"\videos\").Result.GetAwaiter().GetResult();
+                    }
+                }
+                #endregion
             }
-            #endregion
+            else
+            {
+                Console.WriteLine("No Media found.");
+            }
 
             Console.WriteLine();
 
