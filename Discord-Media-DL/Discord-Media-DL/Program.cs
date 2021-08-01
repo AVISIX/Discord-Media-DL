@@ -129,13 +129,24 @@ If so, this will close all instances of Discord and your Browsers.",
 
                                     Console.ForegroundColor = ConsoleColor.Yellow;
 
-                                    for(int i = 0; i < tokens.Length; i++)
                                     {
-                                        string temp = tokens[i];
-                                        Token.DiscordUser user = Token.GetUserByToken(temp).Result.Value;
-                                        Console.WriteLine($"> {i + 1}. Username: {user.Name}#{user.Discriminator}");
+                                        List<string> alreadyListed = new();
 
-                                  //      Console.WriteLine(user.Token);
+                                        for (int i = 0; i < tokens.Length; i++)
+                                        {
+                                            Token.DiscordUser user = Token.GetUserByToken(tokens[i]).Result.Value;
+
+                                            string username = user.Name + "#" + user.Discriminator;
+
+                                            if (alreadyListed.Contains(username))
+                                                continue;
+
+                                            alreadyListed.Add(username);
+
+                                            Console.WriteLine($"> {i + 1}. Username: {username}");
+
+                                            //      Console.WriteLine(user.Token);
+                                        }
                                     }
 
                                     Console.ForegroundColor = ConsoleColor.White;

