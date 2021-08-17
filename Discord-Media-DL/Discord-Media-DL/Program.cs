@@ -79,7 +79,7 @@ ________                      .__                    .___
             string outputPath = KnownFolders.GetPath(KnownFolder.Downloads);
 
 #if DEBUG
-            token = "LOL YOU THOUGHT XD";
+            token = "";
             channel = "754718093984530543";
 #endif
 
@@ -110,8 +110,7 @@ ________                      .__                    .___
                         () => {
                             Console.WriteLine();
 
-                            YesNo(@"Do you want me to search for a Token? 
-If so, this will close all instances of Discord and your Browsers.",
+                            YesNo("Do you want me to search for a Token?",
                                 () => {
                                     Console.WriteLine("Searching for Tokens...");
 
@@ -143,7 +142,7 @@ If so, this will close all instances of Discord and your Browsers.",
 
                                             alreadyListed.Add(username);
 
-                                            Console.WriteLine($"> {i + 1}. Username: {username}");
+                                            Console.WriteLine($"> {i + 1}. Username: '{username}' | Token: '{user.Token}'");
 
                                             //      Console.WriteLine(user.Token);
                                         }
