@@ -200,6 +200,8 @@ ________                      .__                    .___
 
             Console.WriteLine();
 
+            repeat:
+
 #region Channel stuff
             while (channel == null)
             {
@@ -416,9 +418,13 @@ ________                      .__                    .___
 
             Console.WriteLine();
 
-            Console.WriteLine("Done, you can close this Window now :)");
+            Console.WriteLine("Done.");
 
-            Console.Read();
+            Console.WriteLine();
+
+            channel = null;
+
+            goto repeat;
 
             return Task.FromResult(Task.CompletedTask);
         }
