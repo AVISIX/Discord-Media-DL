@@ -3,8 +3,10 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,17 +18,33 @@ namespace Discord_Media_DL.Discord
     public enum AttachmentType
     {
         Image = 0,
-        Video = 1
+        Video = 1,
+        Text = 2
+    }
+
+    public struct Author
+    {
+        public string Name { get; set; }
+
+        public string Discriminator { get; set; }
     }
 
     public struct Attachment
     {
         public AttachmentType Type { get; set; }
-        public string Url { get; set; }
-        public Attachment(AttachmentType type, string url)
+
+        public string Content { get; set; }
+
+        public string TimeStamp { get; set; }
+
+        public Author Author { get; set; }
+
+        public Attachment(AttachmentType type, string content, string timeStamp, Author author)
         {
-            Url = url;
+            TimeStamp = timeStamp;
+            Content = content;
             Type = type;
+            Author = author;
         }
     }
 
@@ -48,7 +66,9 @@ namespace Discord_Media_DL.Discord
         {
             IndexAll,
             IndexImages,
-            IndexVideos
+            IndexVideos,
+            IndexVideosAndImages,
+            IndexText
         }
 
         public async Task<Attachment[]> IndexAttachments(int max = 1000, IndexMode mode = IndexMode.IndexAll)
@@ -72,48 +92,98 @@ namespace Discord_Media_DL.Discord
                 {
                     foreach (JObject j in messages)
                     {
-                        if (j.TryGetValue("attachments", out JToken jt))
+                        try
                         {
-                            foreach (JObject media in (JArray)jt)
-                            {
-                                if (media.TryGetValue("content_type", out JToken ct))
-                                {
-                                    string contentType = ct.ToString();
+                            if (j.ContainsKey("author") == false || j.ContainsKey("timestamp") == false)
+                                continue;
 
-                                    if (contentType.StartsWith("image"))
+                            string timeStamp = j.GetValue("timestamp").ToString();
+
+                            try
+                            {
+                                DateTime time = DateTime.Parse(timeStamp);
+                                timeStamp = $"{time.Day}/{time.Month}/{time.Year}";
+                            }
+                            catch { }
+
+                            JObject jAuthor = (JObject)j.GetValue("author");
+
+                            Author author = new Author()
+                            {
+                                Name = jAuthor.GetValue("username").ToString(),
+                                Discriminator = jAuthor.GetValue("discriminator").ToString()
+                            };
+
+                        //    Console.WriteLine(JsonConvert.SerializeObject(j, Formatting.Indented));
+
+                            if (j.TryGetValue("attachments", out JToken jt))
+                            {
+                                foreach (JObject media in (JArray)jt)
+                                {
+                                    if (media.TryGetValue("content_type", out JToken ct))
                                     {
-                                        if (mode == IndexMode.IndexAll || mode == IndexMode.IndexImages)
-                                            if (media.TryGetValue("url", out JToken jurl))
+                                        string contentType = ct.ToString();
+
+                                        if (contentType.StartsWith("image"))
+                                        {
+                                            try
                                             {
-                                                string url = jurl.ToString();
-                                                if (alreadyIndexed.Contains(url) == false)
-                                                {
-                                                    alreadyIndexed.Add(url);
-                                                    result.Add(new Attachment(AttachmentType.Image, url));
-                                                }
+                                                if (mode == IndexMode.IndexAll || mode == IndexMode.IndexImages || mode == IndexMode.IndexVideosAndImages)
+                                                    if (media.TryGetValue("url", out JToken jurl))
+                                                    {
+                                                        string url = jurl.ToString();
+                                                        if (alreadyIndexed.Contains(url) == false)
+                                                        {
+                                                            alreadyIndexed.Add(url);
+                                                            result.Add(new Attachment(AttachmentType.Image, url, timeStamp, author));
+                                                        }
+                                                    }
                                             }
-                                    }
-                                    else
-                                    if (contentType.StartsWith("video"))
-                                    {
-                                        if (mode == IndexMode.IndexAll || mode == IndexMode.IndexVideos)
-                                            if (media.TryGetValue("url", out JToken jurl))
+                                            catch { }
+                                        }
+                                        else
+                                        if (contentType.StartsWith("video"))
+                                        {
+                                            try
                                             {
-                                                string url = jurl.ToString();
-                                                if (alreadyIndexed.Contains(url) == false)
-                                                {
-                                                    alreadyIndexed.Add(url);
-                                                    result.Add(new Attachment(AttachmentType.Video, url));
-                                                }
+                                                if (mode == IndexMode.IndexAll || mode == IndexMode.IndexVideos || mode == IndexMode.IndexVideosAndImages)
+                                                    if (media.TryGetValue("url", out JToken jurl))
+                                                    {
+                                                        string url = jurl.ToString();
+                                                        if (alreadyIndexed.Contains(url) == false)
+                                                        {
+                                                            alreadyIndexed.Add(url);
+                                                            result.Add(new Attachment(AttachmentType.Video, url, timeStamp, author));
+                                                        }
+                                                    }
                                             }
+                                            catch { }
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (j.TryGetValue("id", out JToken mjt))
+                            if ((mode == IndexMode.IndexAll || mode == IndexMode.IndexText) && j.ContainsKey("content"))
+                            {
+                                try
+                                {
+                                    string content = j.GetValue("content").ToString();
+                                    if (string.IsNullOrWhiteSpace(content) == false)
+                                    {
+                                        result.Add(new Attachment(AttachmentType.Text, content, timeStamp, author));
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            if (j.TryGetValue("id", out JToken mjt))
+                            {
+                                lastMessageID = mjt.ToString();
+                            }
+                        }
+                        catch (Exception ex)
                         {
-                            lastMessageID = mjt.ToString();
+                            Debug.WriteLine(ex);
                         }
                     }
                 };
@@ -167,5 +237,4 @@ namespace Discord_Media_DL.Discord
             return result.ToArray();
         }
     }
-
 }

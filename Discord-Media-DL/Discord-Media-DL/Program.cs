@@ -48,19 +48,19 @@ ________                      .__                    .___
 
         static void YesNo(string question, Action Yes, Action No)
         {
-            retry:
+        retry:
 
             Console.WriteLine(question + "[Y/N]");
 
-            switch(Console.ReadLine().ToLower()[0])
+            switch (Console.ReadLine().ToLower()[0])
             {
                 case 'y': Yes(); break;
                 case 'n': No(); break;
                 default:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Invalid Answer, only Y/N/Yes/No is accepted!\n");
-                    Console.ForegroundColor = ConsoleColor.White;
-                    goto retry;
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Invalid Answer, only Y/N/Yes/No is accepted!\n");
+                Console.ForegroundColor = ConsoleColor.White;
+                goto retry;
             }
 
         }
@@ -79,8 +79,8 @@ ________                      .__                    .___
             string outputPath = KnownFolders.GetPath(KnownFolder.Downloads);
 
 #if DEBUG
-            token = "";
-            channel = "754718093984530543";
+            token = "MjI3MDg5MDI0NTM4NTA5MzEy.Ykc1aA.lFhgeIooD-ThIZgqhGicAOT3Rlc";
+            channel = "959507022347395102";
 #endif
 
             #region Token Stuff
@@ -91,7 +91,8 @@ ________                      .__                    .___
                 try
                 {
                     YesNo("Do you already have a Token?",
-                        () => {
+                        () =>
+                        {
                             Console.WriteLine("Please enter your Token:");
 
                             string temp = Console.ReadLine().Replace(" ", "");
@@ -107,16 +108,18 @@ ________                      .__                    .___
                             token = temp;
                         },
 
-                        () => {
+                        () =>
+                        {
                             Console.WriteLine();
 
                             YesNo("Do you want me to search for a Token?",
-                                () => {
+                                () =>
+                                {
                                     Console.WriteLine("Searching for Tokens...");
 
                                     string[] tokens = Token.FindAllTokens().GetAwaiter().GetResult();
 
-                                    if(tokens.Length == 0)
+                                    if (tokens.Length == 0)
                                     {
                                         Console.WriteLine("No Tokens found.");
                                         return;
@@ -152,7 +155,7 @@ ________                      .__                    .___
 
                                     {
                                         string answer = Console.ReadLine();
-                                    
+
                                         if (string.IsNullOrEmpty(answer))
                                             goto askAgain;
 
@@ -184,7 +187,8 @@ ________                      .__                    .___
                                         }
                                     }
                                 },
-                                () => {
+                                () =>
+                                {
                                     Console.WriteLine();
                                 });
                         });
@@ -196,13 +200,13 @@ ________                      .__                    .___
 #endif
                 }
             }
-#endregion
+            #endregion
 
             Console.WriteLine();
 
-            repeat:
+        repeat:
 
-#region Channel stuff
+            #region Channel stuff
             while (channel == null)
             {
                 try
@@ -211,7 +215,7 @@ ________                      .__                    .___
 
                     string temp = Console.ReadLine();
 
-                    if(Channel.IsValid(temp, token).Result == false)
+                    if (Channel.IsValid(temp, token).Result == false)
                     {
                         Console.WriteLine("This Channel doesn't exist or you don't have access to it.\n");
                         continue;
@@ -219,18 +223,18 @@ ________                      .__                    .___
 
                     channel = temp;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
 #if DEBUG
                     Console.WriteLine(e);
 #endif
                 }
             }
-#endregion
+            #endregion
 
             Console.WriteLine();
 
-#region Output Dir
+            #region Output Dir
 #if RELEASE
             {
             getDirAgain:
@@ -261,19 +265,19 @@ ________                      .__                    .___
             if (Directory.Exists(outputPath) == false)
                 Directory.CreateDirectory(outputPath);
 #endif
-#endregion
+            #endregion
 
             Console.WriteLine();
 
             Attachment[] media = new Attachment[] { };
 
-#region Index Media Url's
+            #region Index Media Url's
             {
 
 #if RELEASE
                 int maxDownloads = 1000;
 
-#region Get Max Indexing Depth
+                #region Get Max Indexing Depth
                 {
                     Console.WriteLine("How many messages do you want to index? [Press Enter for Default: 1000]:");
 
@@ -287,7 +291,7 @@ ________                      .__                    .___
                             Console.WriteLine("Invalid Download Amount. Using default: 1000");
                     }
                 }
-#endregion
+                #endregion
 #else
                 int maxDownloads = 1000;
 #endif
@@ -296,7 +300,7 @@ ________                      .__                    .___
 
                 ChannelReader.IndexMode mode = ChannelReader.IndexMode.IndexAll;
 
-#region Get Index Mode
+                #region Get Index Mode
 #if RELEASE
                 {
                 getModeAgain:
@@ -330,7 +334,7 @@ ________                      .__                    .___
                         goto getModeAgain;
                 }
 #endif
-#endregion
+                #endregion
                 Console.WriteLine();
 
                 Console.WriteLine("Indexing Media...");
@@ -356,7 +360,7 @@ ________                      .__                    .___
 
                 Console.WriteLine($"Finished Indexing, total Media indexed: {media.Length}");
             }
-#endregion
+            #endregion
 
             Console.WriteLine();
 
@@ -380,18 +384,23 @@ ________                      .__                    .___
 
                     List<string> ImageUrls = new List<string>();
                     List<string> VideoUrls = new List<string>();
+                    List<Attachment> TextMessages = new List<Attachment>();
 
                     foreach (Attachment m in media)
                     {
                         switch (m.Type)
                         {
                             case AttachmentType.Image:
-                                ImageUrls.Add(m.Url);
-                                break;
+                            ImageUrls.Add(m.Content);
+                            break;
 
                             case AttachmentType.Video:
-                                VideoUrls.Add(m.Url);
-                                break;
+                            VideoUrls.Add(m.Content);
+                            break;
+
+                            case AttachmentType.Text:
+                            TextMessages.Add(m);
+                            break;
                         }
                     }
 
@@ -404,9 +413,30 @@ ________                      .__                    .___
                     if (VideoUrls.Count > 0)
                     {
                         Console.WriteLine();
-                        Console.WriteLine("Downloading Vidoes...");
-
+                        Console.WriteLine("Downloading Videos...");
                         dl.Download(VideoUrls.ToArray(), outputPath + @"\videos\").Result.GetAwaiter().GetResult();
+                    }
+
+                    if(TextMessages.Count > 0)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("Downloading Message History...");
+
+                        string historyFile = Path.Combine(outputPath, "history.txt");
+
+                        if (File.Exists(historyFile) == true)
+                            File.Delete(historyFile);
+                        
+                        TextMessages.Reverse();
+
+                        using (StreamWriter fs = File.CreateText(historyFile))
+                        {
+                            foreach (var message in TextMessages)
+                            {
+                                fs.WriteLine($"[ --- {message.Author.Name}#{message.Author.Discriminator} on {message.TimeStamp} --- ]");
+                                fs.WriteLine(message.Content + "\n\n");
+                            }
+                        }
                     }
                 }
                 #endregion
