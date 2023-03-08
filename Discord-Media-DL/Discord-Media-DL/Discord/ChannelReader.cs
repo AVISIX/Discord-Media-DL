@@ -1,14 +1,11 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Discord_Media_DL.Discord
 {
@@ -73,20 +70,20 @@ namespace Discord_Media_DL.Discord
 
         public async Task<Attachment[]> IndexAttachments(int max = 1000, IndexMode mode = IndexMode.IndexAll)
         {
-            List<Attachment> result = new List<Attachment>();
-            List<string> alreadyIndexed = new List<string>();
+            List<Attachment> result = new();
+            List<string> alreadyIndexed = new();
 
             try
             {
-                WebClient client = new WebClient();
+                WebClient client = new();
                 client.Headers.Add("authorization", Token);
 
-                int counter = 0;
+                var counter = 0;
 
-                string data = await client.DownloadStringTaskAsync($"https://discord.com/api/v9/channels/{ChannelID}/messages?limit={Math.Min(max - counter, 50)}");
+                var data = await client.DownloadStringTaskAsync($"https://discord.com/api/v9/channels/{ChannelID}/messages?limit={Math.Min(max - counter, 50)}");
                 JArray messages = (JArray)JsonConvert.DeserializeObject(data);
 
-                string lastMessageID = "";
+                var lastMessageID = "";
 
                 Action parseMessages = () =>
                 {
@@ -97,7 +94,7 @@ namespace Discord_Media_DL.Discord
                             if (j.ContainsKey("author") == false || j.ContainsKey("timestamp") == false)
                                 continue;
 
-                            string timeStamp = j.GetValue("timestamp").ToString();
+                            var timeStamp = j.GetValue("timestamp").ToString();
 
                             try
                             {
@@ -108,13 +105,13 @@ namespace Discord_Media_DL.Discord
 
                             JObject jAuthor = (JObject)j.GetValue("author");
 
-                            Author author = new Author()
+                            Author author = new()
                             {
                                 Name = jAuthor.GetValue("username").ToString(),
                                 Discriminator = jAuthor.GetValue("discriminator").ToString()
                             };
 
-                        //    Console.WriteLine(JsonConvert.SerializeObject(j, Formatting.Indented));
+                            //    Console.WriteLine(JsonConvert.SerializeObject(j, Formatting.Indented));
 
                             if (j.TryGetValue("attachments", out JToken jt))
                             {
@@ -122,7 +119,7 @@ namespace Discord_Media_DL.Discord
                                 {
                                     if (media.TryGetValue("content_type", out JToken ct))
                                     {
-                                        string contentType = ct.ToString();
+                                        var contentType = ct.ToString();
 
                                         if (contentType.StartsWith("image"))
                                         {
@@ -131,7 +128,7 @@ namespace Discord_Media_DL.Discord
                                                 if (mode == IndexMode.IndexAll || mode == IndexMode.IndexImages || mode == IndexMode.IndexVideosAndImages)
                                                     if (media.TryGetValue("url", out JToken jurl))
                                                     {
-                                                        string url = jurl.ToString();
+                                                        var url = jurl.ToString();
                                                         if (alreadyIndexed.Contains(url) == false)
                                                         {
                                                             alreadyIndexed.Add(url);
@@ -149,7 +146,7 @@ namespace Discord_Media_DL.Discord
                                                 if (mode == IndexMode.IndexAll || mode == IndexMode.IndexVideos || mode == IndexMode.IndexVideosAndImages)
                                                     if (media.TryGetValue("url", out JToken jurl))
                                                     {
-                                                        string url = jurl.ToString();
+                                                        var url = jurl.ToString();
                                                         if (alreadyIndexed.Contains(url) == false)
                                                         {
                                                             alreadyIndexed.Add(url);
@@ -167,7 +164,7 @@ namespace Discord_Media_DL.Discord
                             {
                                 try
                                 {
-                                    string content = j.GetValue("content").ToString();
+                                    var content = j.GetValue("content").ToString();
                                     if (string.IsNullOrWhiteSpace(content) == false)
                                     {
                                         result.Add(new Attachment(AttachmentType.Text, content, timeStamp, author));
@@ -195,13 +192,13 @@ namespace Discord_Media_DL.Discord
                 // only enter this scope if there is *actually* more messages
                 if (messages.Count >= 50)
                 {
-                    OnProgressUpdated?.Invoke((100.0 / max) * counter);
+                    OnProgressUpdated?.Invoke(100.0 / max * counter);
 
                     while (true)
                     {
                         try
                         {
-                            int limit = Math.Min(max - counter, 50);
+                            var limit = Math.Min(max - counter, 50);
 
                             if (limit == 0) // sending a limit of 0 will result in an error from the api
                                 break;
@@ -211,7 +208,7 @@ namespace Discord_Media_DL.Discord
 
                             counter += messages.Count;
 
-                            OnProgressUpdated?.Invoke((100.0 / max) * counter);
+                            OnProgressUpdated?.Invoke(100.0 / max * counter);
 
                             parseMessages();
 
@@ -222,7 +219,7 @@ namespace Discord_Media_DL.Discord
                     }
                 }
                 else
-                    OnProgressUpdated?.Invoke((100.0 / messages.Count) * counter);
+                    OnProgressUpdated?.Invoke(100.0 / messages.Count * counter);
 
                 client.Dispose();
             }

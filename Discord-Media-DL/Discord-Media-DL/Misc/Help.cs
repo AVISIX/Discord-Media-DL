@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Discord_Media_DL.Misc
 {
-    public static  class Help
+    public static class Help
     {
         public static class Paths
         {
@@ -38,9 +34,9 @@ namespace Discord_Media_DL.Misc
                 if (Directory.Exists(Path) == false)
                     return;
 
-                DirectoryInfo info = new DirectoryInfo(Path);
+                DirectoryInfo info = new(Path);
 
-                foreach (var file in info.GetFiles())
+                foreach (FileInfo file in info.GetFiles())
                 {
                     if (file.Exists == false)
                         continue;
@@ -48,7 +44,7 @@ namespace Discord_Media_DL.Misc
                     callback(file.FullName);
                 }
 
-                foreach (var folder in info.GetDirectories())
+                foreach (DirectoryInfo folder in info.GetDirectories())
                 {
                     if (folder.Exists == false)
                         continue;
@@ -56,6 +52,66 @@ namespace Discord_Media_DL.Misc
                     ExploreFilesRecursively(folder.FullName, callback);
                 }
             }
+        }
+
+        public static string DumpProcessAsString(string processName)
+        {
+            if (string.IsNullOrWhiteSpace(processName))
+                return "";
+
+            try
+            {
+                var result = "";
+
+                Process proc = null;
+
+                foreach (Process p in Process.GetProcessesByName(processName))
+                {
+                    if (p == null || p.HasExited == true || p.Handle == IntPtr.Zero)
+                        continue;
+
+                    proc = p;
+                    break;
+                }
+
+                if (proc == null)
+                    return "";
+
+                var dumpContainer = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+                try
+                {
+                    if (File.Exists(dumpContainer) == true)
+                        File.Delete(dumpContainer);
+
+                    using (FileStream fs = File.Create(dumpContainer))
+                    {
+                        Native.MiniDumpWriteDump(proc.Handle, (uint)proc.Id, fs.SafeFileHandle, 0x2, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                    }
+
+                    result = File.ReadAllText(dumpContainer);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+                finally
+                {
+                    try
+                    {
+                        File.Delete(dumpContainer);
+                    }
+                    catch { }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+
+            return "";
         }
     }
 }

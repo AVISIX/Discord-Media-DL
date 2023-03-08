@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Discord_Media_DL.Misc
 {
-    using System;
-    using System.Runtime.InteropServices;
-
     /// <summary>
     /// Class containing methods to retrieve specific file system paths.
     /// </summary>
@@ -60,11 +54,11 @@ namespace Discord_Media_DL.Misc
         private static string GetPath(KnownFolder knownFolder, KnownFolderFlags flags,
             bool defaultUser)
         {
-            int result = SHGetKnownFolderPath(new Guid(_knownFolderGuids[(int)knownFolder]),
+            var result = SHGetKnownFolderPath(new Guid(_knownFolderGuids[(int)knownFolder]),
                 (uint)flags, new IntPtr(defaultUser ? -1 : 0), out IntPtr outPath);
             if (result >= 0)
             {
-                string path = Marshal.PtrToStringUni(outPath);
+                var path = Marshal.PtrToStringUni(outPath);
                 Marshal.FreeCoTaskMem(outPath);
                 return path;
             }

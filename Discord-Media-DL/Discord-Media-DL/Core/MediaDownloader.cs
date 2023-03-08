@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Discord_Media_DL.Core
@@ -19,7 +17,7 @@ namespace Discord_Media_DL.Core
         public event MediaDownloaderProgressUpdateHandler OnProgressUpdated;
         public event MediaDownloaderErrorHandler OnDownloadError;
 
-        private readonly object lck = new object();
+        private readonly object lck = new();
 
         public async Task<Task> Download(string[] urls, string destination)
         {
@@ -33,39 +31,46 @@ namespace Discord_Media_DL.Core
             if (destination.EndsWith("\\") == false)
                 destination += "\\";
 
+            try
+            {
+                if (Directory.Exists(destination))
+                    Directory.Delete(destination, recursive: true);
+            }
+            catch { }
+
             if (Directory.Exists(destination) == false)
                 Directory.CreateDirectory(destination);
 
             // It is extremely unlikely that there are 2 medias with the exact same size. if thats the case it has to be a duplicate.
-            List<int> allSizes = new List<int>(); 
+            List<int> allSizes = new();
 
-            Task t = new Task(() =>
+            Task t = new(() =>
             {
                 List<string> queue = urls.ToList();
 
-                int pointer = urls.Length - 1;
+                var pointer = urls.Length - 1;
 
                 while (pointer >= 0)
                 {
-                    string fileUrl = "";
+                    var fileUrl = "";
 
                     fileUrl = urls[pointer];
 
                     pointer--;
 
-                    double progress = (100.0 / (urls.Length)) * (urls.Length - 1.0 - pointer);
+                    var progress = 100.0 / urls.Length * (urls.Length - 1.0 - pointer);
 
                     try
                     {
-                        WebClient client = new WebClient();
-                        byte[] data = client.DownloadData(fileUrl);
+                        WebClient client = new();
+                        var data = client.DownloadData(fileUrl);
 
                         if (allSizes.Contains(data.Length) == false)
                         {
                             allSizes.Add(data.Length);
 
-                            string extension = Path.GetExtension(new Uri(fileUrl).LocalPath);
-                            string path = destination + Guid.NewGuid().ToString() + extension;
+                            var extension = Path.GetExtension(new Uri(fileUrl).LocalPath);
+                            var path = destination + Guid.NewGuid().ToString() + extension;
 
                             if (File.Exists(path) == false)
                                 File.Create(path).Close();

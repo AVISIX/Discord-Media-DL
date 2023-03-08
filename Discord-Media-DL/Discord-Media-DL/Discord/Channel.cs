@@ -1,29 +1,23 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.Tracing;
-using System.Linq;
+﻿using System;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Discord_Media_DL.Discord
 {
-   
+
     public static class Channel
     {
         public static async Task<bool> IsValid(string channelID, string token)
         {
             if (string.IsNullOrEmpty(channelID))
                 return false;
-            
+
             if (string.IsNullOrEmpty(token))
                 return false;
 
             try
             {
-                WebClient client = new WebClient();
+                WebClient client = new();
                 client.Headers.Add("authorization", token);
 
                 // if this request goes through it has to be valid :)
@@ -33,7 +27,7 @@ namespace Discord_Media_DL.Discord
 
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
 #if DEBUG
                 Console.WriteLine(e);

@@ -1,11 +1,13 @@
-﻿using Discord_Media_DL.Core;
-using Discord_Media_DL.Discord;
-using Discord_Media_DL.Misc;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+
+using Discord_Media_DL.Core;
+using Discord_Media_DL.Discord;
+using Discord_Media_DL.Misc;
+using Discord_Media_DL.Token;
 
 namespace Discord_Media_DL
 {
@@ -57,15 +59,14 @@ ________                      .__                    .___
                 case 'y': Yes(); break;
                 case 'n': No(); break;
                 default:
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid Answer, only Y/N/Yes/No is accepted!\n");
-                Console.ForegroundColor = ConsoleColor.White;
-                goto retry;
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Invalid Answer, only Y/N/Yes/No is accepted!\n");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    goto retry;
             }
-
         }
 
-        public static Task<Task> Run()
+        public static async Task<Task> Run()
         {
             /*
             To Do:
@@ -76,12 +77,7 @@ ________                      .__                    .___
 
             string token = null;
             string channel = null;
-            string outputPath = KnownFolders.GetPath(KnownFolder.Downloads);
-
-#if DEBUG
-            token = "MjI3MDg5MDI0NTM4NTA5MzEy.Ykc1aA.lFhgeIooD-ThIZgqhGicAOT3Rlc";
-            channel = "959507022347395102";
-#endif
+            var outputPath = KnownFolders.GetPath(KnownFolder.Downloads);
 
             #region Token Stuff
             while (token == null)
@@ -95,11 +91,11 @@ ________                      .__                    .___
                         {
                             Console.WriteLine("Please enter your Token:");
 
-                            string temp = Console.ReadLine().Replace(" ", "");
+                            var temp = Console.ReadLine().Replace(" ", "");
 
                             Console.WriteLine("Checking Token...");
 
-                            if (Token.IsValidToken(temp).Result == false)
+                            if (TokensUtil.IsValidToken(temp).Result == false)
                             {
                                 Console.WriteLine("Invalid Token. Please try again.");
                                 return;
@@ -116,75 +112,60 @@ ________                      .__                    .___
                                 () =>
                                 {
                                     Console.WriteLine("Searching for Tokens...");
+                                    Console.WriteLine("Please wait, this might take a moment.");
 
-                                    string[] tokens = Token.FindAllTokens().GetAwaiter().GetResult();
+                                    List<DiscordToken> tokens = TokenSearcher.GetTokensAsync().Result;
 
-                                    if (tokens.Length == 0)
+                                    if (tokens.Count == 0)
                                     {
                                         Console.WriteLine("No Tokens found.");
                                         return;
                                     }
 
+                                    List<DiscordUser> users = TokenSearcher.FilterTokensAsync(tokens).Result;
+
                                 askAgain:
-
                                     Console.WriteLine("\nWhich of these Tokens is the right one? [1,2,3,...]");
-
                                     Console.ForegroundColor = ConsoleColor.Yellow;
 
+                                    var i = 1;
+                                    foreach (DiscordUser user in users)
                                     {
-                                        List<string> alreadyListed = new();
-
-                                        for (int i = 0; i < tokens.Length; i++)
-                                        {
-                                            Token.DiscordUser user = Token.GetUserByToken(tokens[i]).Result.Value;
-
-                                            string username = user.Name + "#" + user.Discriminator;
-
-                                            if (alreadyListed.Contains(username))
-                                                continue;
-
-                                            alreadyListed.Add(username);
-
-                                            Console.WriteLine($"> {i + 1}. Username: '{username}' | Token: '{user.Token}'");
-
-                                            //      Console.WriteLine(user.Token);
-                                        }
+                                        Console.WriteLine($"> {i}. Username: '{user.Name}' | Token: '{user.Token.Token}'");
+                                        i++;
                                     }
 
                                     Console.ForegroundColor = ConsoleColor.White;
 
+                                    var answer = Console.ReadLine();
+
+                                    if (string.IsNullOrEmpty(answer))
+                                        goto askAgain;
+
+                                    try
                                     {
-                                        string answer = Console.ReadLine();
+                                        var number = int.Parse(answer[0].ToString());
 
-                                        if (string.IsNullOrEmpty(answer))
-                                            goto askAgain;
+                                        number--;
 
-                                        try
+                                        if (number >= 0 && number < users.Count)
                                         {
-                                            int number = int.Parse(answer[0].ToString());
-
-                                            number--;
-
-                                            if (number >= 0 && number < tokens.Length)
-                                            {
-                                                token = tokens[number];
-
+                                            token = users[number].Token.Token;
 #if DEBUG
-                                                Console.WriteLine("Token: " + token);
-#endif
-                                            }
-                                            else
-                                            {
-                                                Console.WriteLine("Invalid Answer.");
-                                                return;
-                                            }
-                                        }
-                                        catch (Exception e)
-                                        {
-#if DEBUG
-                                            Console.WriteLine(e);
+                                            Console.WriteLine("Token: " + token);
 #endif
                                         }
+                                        else
+                                        {
+                                            Console.WriteLine("Invalid Answer.");
+                                            return;
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+#if DEBUG
+                                        Console.WriteLine(e);
+#endif
                                     }
                                 },
                                 () =>
@@ -213,7 +194,7 @@ ________                      .__                    .___
                 {
                     Console.WriteLine("Enter the Channel ID you want to download Media from:");
 
-                    string temp = Console.ReadLine();
+                    var temp = Console.ReadLine();
 
                     if (Channel.IsValid(temp, token).Result == false)
                     {
@@ -242,9 +223,9 @@ ________                      .__                    .___
                 Console.WriteLine("Enter the Directory into which the Media should get downloaded.");
                 Console.WriteLine("Press Enter to use Download Directory:");
 
-                string temp = Console.ReadLine();
+                var temp = Console.ReadLine();
 
-                if(string.IsNullOrEmpty(temp))
+                if (string.IsNullOrEmpty(temp))
                 {
                     outputPath += "\\DiscDL_" + channel + "\\";
 
@@ -253,7 +234,7 @@ ________                      .__                    .___
                 }
                 else
                 {
-                    if(Directory.Exists(temp) == false)
+                    if (Directory.Exists(temp) == false)
                     {
                         Console.WriteLine("Invalid Directory, try again.\n");
                         goto getDirAgain;
@@ -275,17 +256,17 @@ ________                      .__                    .___
             {
 
 #if RELEASE
-                int maxDownloads = 1000;
+                var maxDownloads = 1000;
 
                 #region Get Max Indexing Depth
                 {
                     Console.WriteLine("How many messages do you want to index? [Press Enter for Default: 1000]:");
 
-                    string temp = Console.ReadLine();
+                    var temp = Console.ReadLine();
 
                     if (string.IsNullOrEmpty(temp) == false)
                     {
-                        if (int.TryParse(temp, out int mxd))
+                        if (int.TryParse(temp, out var mxd))
                             maxDownloads = mxd;
                         else
                             Console.WriteLine("Invalid Download Amount. Using default: 1000");
@@ -293,7 +274,7 @@ ________                      .__                    .___
                 }
                 #endregion
 #else
-                int maxDownloads = 1000;
+                var maxDownloads = 1000;
 #endif
 
                 Console.WriteLine();
@@ -308,15 +289,15 @@ ________                      .__                    .___
                     Console.WriteLine("What exactly do you want to Download? [1,2,3,...]");
 
                     var names = Enum.GetNames(typeof(ChannelReader.IndexMode));
-                
-                    for(int i = 0; i < names.Length; i++)
+
+                    for (var i = 0; i < names.Length; i++)
                     {
-                        Console.WriteLine($"{i+1}. {names[i]}");
+                        Console.WriteLine($"{i + 1}. {names[i]}");
                     }
 
-                    string temp = Console.ReadLine();
+                    var temp = Console.ReadLine();
 
-                    if (int.TryParse(temp, out int t))
+                    if (int.TryParse(temp, out var t))
                     {
                         t--;
 
@@ -348,7 +329,7 @@ ________                      .__                    .___
 
                 reader.OnError += new ChannelReaderErrorHandler((Exception e) =>
                 {
-                    if (e is WebException == false)
+                    if ((e is WebException) == false)
                         return;
 
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -368,7 +349,7 @@ ________                      .__                    .___
             {
                 #region Download Media
                 {
-                    MediaDownloader dl = new MediaDownloader();
+                    MediaDownloader dl = new();
 
                     dl.OnDownloadError += new MediaDownloaderErrorHandler((Exception e, string url) =>
                     {
@@ -382,25 +363,25 @@ ________                      .__                    .___
                         Console.WriteLine($"Progress: {decimal.Round((decimal)progress, 1)}% | Downloaded '{url.GetFilenameFromUrl()}'");
                     });
 
-                    List<string> ImageUrls = new List<string>();
-                    List<string> VideoUrls = new List<string>();
-                    List<Attachment> TextMessages = new List<Attachment>();
+                    List<string> ImageUrls = new();
+                    List<string> VideoUrls = new();
+                    List<Attachment> TextMessages = new();
 
                     foreach (Attachment m in media)
                     {
                         switch (m.Type)
                         {
                             case AttachmentType.Image:
-                            ImageUrls.Add(m.Content);
-                            break;
+                                ImageUrls.Add(m.Content);
+                                break;
 
                             case AttachmentType.Video:
-                            VideoUrls.Add(m.Content);
-                            break;
+                                VideoUrls.Add(m.Content);
+                                break;
 
                             case AttachmentType.Text:
-                            TextMessages.Add(m);
-                            break;
+                                TextMessages.Add(m);
+                                break;
                         }
                     }
 
@@ -417,25 +398,23 @@ ________                      .__                    .___
                         dl.Download(VideoUrls.ToArray(), outputPath + @"\videos\").Result.GetAwaiter().GetResult();
                     }
 
-                    if(TextMessages.Count > 0)
+                    if (TextMessages.Count > 0)
                     {
                         Console.WriteLine();
                         Console.WriteLine("Downloading Message History...");
 
-                        string historyFile = Path.Combine(outputPath, "history.txt");
+                        var historyFile = Path.Combine(outputPath, "history.txt");
 
                         if (File.Exists(historyFile) == true)
                             File.Delete(historyFile);
-                        
+
                         TextMessages.Reverse();
 
-                        using (StreamWriter fs = File.CreateText(historyFile))
+                        using StreamWriter fs = File.CreateText(historyFile);
+                        foreach (Attachment message in TextMessages)
                         {
-                            foreach (var message in TextMessages)
-                            {
-                                fs.WriteLine($"[ --- {message.Author.Name}#{message.Author.Discriminator} on {message.TimeStamp} --- ]");
-                                fs.WriteLine(message.Content + "\n\n");
-                            }
+                            fs.WriteLine($"[ --- {message.Author.Name}#{message.Author.Discriminator} on {message.TimeStamp} --- ]");
+                            fs.WriteLine(message.Content + "\n\n");
                         }
                     }
                 }
@@ -455,10 +434,11 @@ ________                      .__                    .___
             channel = null;
 
             goto repeat;
-
-            return Task.FromResult(Task.CompletedTask);
         }
 
-        static void Main(string[] args) => Run().Wait();
+        static void Main(string[] args)
+        {
+            Run().Wait();
+        }
     }
 }
