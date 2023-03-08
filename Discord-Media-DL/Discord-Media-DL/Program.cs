@@ -43,7 +43,7 @@ ________                      .__                    .___
 
             Console.ForegroundColor = ConsoleColor.Green;
 
-            Console.WriteLine("Author: github.com/sixmax");
+            Console.WriteLine("Author: github.com/AVISIX");
 
             Console.ForegroundColor = ConsoleColor.White;
         }
